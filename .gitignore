@@ -1,9 +1,9 @@
 
-data/
+
+
+
+*.dta
+
+*.zip
 
 rawdata/
-
-slack/
-
-output/
-
