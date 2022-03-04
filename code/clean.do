@@ -4,7 +4,7 @@
 
 capture log close
 clear all
-set graphics on
+set graphics off
 
 global root_dir = "C:\Users\churn\Documents\UCSD\Projects\government_shutdown"
 global code_dir = "${root_dir}\code"
@@ -26,16 +26,23 @@ local end_year = 2014
 * Process dates of government shutdowns
 import delimited using "${raw_dir}\federal_government_shutdowns.csv", clear
 generate quarter = .
-replace quarter = 3 if month <= 3
-replace quarter = 6 if inrange(month, 4, 6)
-replace quarter = 9 if inrange(month, 7, 9)
-replace quarter = 12 if inrange(month, 10, 12)
+replace quarter = 1 if month <= 3
+replace quarter = 2 if inrange(month, 4, 6)
+replace quarter = 3 if inrange(month, 7, 9)
+replace quarter = 4 if inrange(month, 10, 12)
 
 keep year quarter
 generate shutdown = 1
 
 gduplicates drop year quarter, force // drop one of the 2 shutdowns that occured in q4 of 1995
+
+tostring year, replace
+tostring quarter, replace
+generate qdate_str = year + " " + "q" + quarter
+generate qdate = quarterly(qdate_str, "YQ")
+drop qdate_str
 save "${data_dir}\federal_government_shutdown_quarters.dta", replace
+
 
 */
 
@@ -222,6 +229,7 @@ restore
 generate above_med_pay = .
 replace above_med_pay = 1 if (adj_basic_pay > med_adj_basic_pay) & (adj_basic_pay != .) & (occ != "" | occ != "****")
 replace above_med_pay = 0 if (adj_basic_pay <= med_adj_basic_pay) & (occ != "" | occ != "****")
+
 bysort year quarter: gegen n_above_med_pay = total(emp) if above_med_pay == 1
 bysort year quarter: gegen n_below_med_pay = total(emp) if above_med_pay == 0
 
@@ -237,6 +245,14 @@ label variable post_ugrad "0 = missing, 1 = <ugrad, 2 = >ugrad"
 bysort year quarter: gegen n_post_ugrad = total(emp) if post_ugrad == 2
 bysort year quarter: gegen n_less_ugrad = total(emp) if post_ugrad == 1
 bysort year quarter: gegen n_miss_educ = total(emp) if post_ugrad == 0
+
+* Calculate n employees above and below "median" length of service
+generate above_med_los = 1
+replace above_med_los = 0 if (los_level == "< 1" | los_level == "1-2" | los_level == "3-4" | los_level == "5-9" | los_level == "10-14")
+replace above_med_los = . if los_level == "UNSP"
+
+bysort year quarter: gegen n_above_med_los = total(emp) if above_med_los == 1
+bysort year quarter: gegen n_below_med_los = total(emp) if above_med_los == 0
 
 * Collapse
 gcollapse (firstnm) n_*, by(year quarter)
@@ -274,6 +290,16 @@ bysort year quarter: gegen n_seps_below_med_pay = total(separation_ind) if above
 bysort year quarter: gegen n_acce_above_med_pay = total(accession_ind) if above_med_pay == 1
 bysort year quarter: gegen n_acce_below_med_pay = total(accession_ind) if above_med_pay == 0
 
+* Calculate n employees above and below "median" length of service
+generate above_med_los = 1
+replace above_med_los = 0 if (los_level == "< 1" | los_level == "1-2" | los_level == "3-4" | los_level == "5-9" | los_level == "10-14")
+replace above_med_los = . if los_level == "UNSP"
+
+bysort year quarter: gegen n_seps_above_med_los = total(separation_ind) if above_med_los == 1
+bysort year quarter: gegen n_seps_below_med_los = total(separation_ind) if above_med_los == 0
+bysort year quarter: gegen n_acce_above_med_los = total(accession_ind) if above_med_los == 1
+bysort year quarter: gegen n_acce_below_med_los = total(accession_ind) if above_med_los == 0
+
 * Education indicators (by ugrad completion)
 generate educ = education
 replace educ = "98" if education == "**"
@@ -298,30 +324,28 @@ save "${data_dir}/dynamic_merged_combined_collapsed.dta", replace
 ********************************************************************************
 * Merge aggregate status and dynamic numbers to calculate rates
 ********************************************************************************
-
 * Merge status and dynamic aggregate numbers
 use "${data_dir}/status_combined_collapsed.dta", clear
 merge 1:1 year quarter using "${data_dir}/dynamic_merged_combined_collapsed.dta", nogenerate
 
 generate qdate = qofd(mdy(quarter, 1, year))
 
+drop if qdate == 112 | qdate == 113 | qdate == 114 | qdate == 140 | qdate == 172
 
 * Calculate separation rates for each subgroup
-local group_list "all post_ugrad less_ugrad above_med_pay below_med_pay"
+local group_list "all post_ugrad less_ugrad above_med_pay below_med_pay above_med_los below_med_los"
 foreach g of local group_list {
-	generate sep_rate_`g' = n_seps_`g'/n_`g'
+	generate seps_rate_`g' = n_seps_`g'/n_`g'
 	generate acce_rate_`g' = n_acce_`g'/n_`g'
 }
 
 * Control for seasonal and trend effects
 
 foreach g of local group_list {
-	regress sep_rate_`g' qdate i.quarter, nocons
-	predict sep_rate_`g'_adj, resid
-	drop sep_rate_`g'
+	regress seps_rate_`g' qdate i.quarter, nocons
+	predict seps_rate_`g'_adj, resid
 	regress acce_rate_`g' qdate i.quarter, nocons
 	predict acce_rate_`g'_adj, resid
-	drop acce_rate_`g'
 }
 
 * Calculate confidence intervals using proportion
@@ -340,60 +364,260 @@ replace separation = 1 if type == 2
 replace n = n - separation_count if type == 3
 
 proportion separation [fweight = n] if type != 1, over(qdate)
-parmest, saving("${output_dir}/CI_sep_rate.dta", replace)
+parmest, saving("${output_dir}/CI_seps_rate.dta", replace)
+
+proportion accession [fweight = n] if type != 2, over(qdate)
+parmest, saving("${output_dir}/CI_acce_rate.dta", replace)
 restore
+
 
 * Calculate CI bands
 frame create ci_frame
 frame change ci_frame
-use "${output_dir}/CI_sep_rate.dta", clear
+use "${output_dir}/CI_seps_rate.dta", clear
 split parm, parse("." "@")
 destring parm1, generate(type)
 destring parm3, generate(qdate)
 drop if type == 0
-generate sep_rate_all_CI_band = max95 - min95
-keep qdate sep_rate_all_CI_band
+generate seps_rate_all_CI_band = max95 - min95
+keep qdate seps_rate_all_CI_band
 
-save "${output_dir}/CI_sep_rate.dta", replace
+save "${output_dir}/CI_seps_rate.dta", replace
 
-* Plot confidence intervals
+* Repeat for accessions
+use "${output_dir}/CI_acce_rate.dta", clear
+split parm, parse("." "@")
+destring parm1, generate(type)
+destring parm3, generate(qdate)
+drop if type == 0
+generate acce_rate_all_CI_band = max95 - min95
+keep qdate acce_rate_all_CI_band
+
+save "${output_dir}/CI_acce_rate.dta", replace
+
+
+* Plot confidence intervals for separations
 frame change default
-merge 1:1 qdate using "${output_dir}/CI_sep_rate.dta", nogenerate
-generate sep_rate_all_adj_max95 = sep_rate_all_adj + sep_rate_all_CI_band/2
-generate sep_rate_all_adj_min95 = sep_rate_all_adj - sep_rate_all_CI_band/2
-drop sep_rate_all_CI_band
+merge 1:1 qdate using "${output_dir}/CI_seps_rate.dta", nogenerate
+generate seps_rate_all_adj_max95 = seps_rate_all_adj + seps_rate_all_CI_band/2
+generate seps_rate_all_adj_min95 = seps_rate_all_adj - seps_rate_all_CI_band/2
 
 format qdate %tq
 tsset qdate
 sort qdate
-eclplot sep_rate_all_adj sep_rate_all_adj_min95 sep_rate_all_adj_max95 qdate, eplottype(scatter) estopts(mlabel(point)) ciforeground
+
+eclplot seps_rate_all_adj seps_rate_all_adj_min95 seps_rate_all_adj_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+graph export "${output_dir}/separation_rate_adj_CI.png", replace
+
+* Plot confidence intervals for accessions
+merge 1:1 qdate using "${output_dir}/CI_acce_rate.dta", nogenerate
+generate acce_rate_all_adj_max95 = acce_rate_all_adj + acce_rate_all_CI_band/2
+generate acce_rate_all_adj_min95 = acce_rate_all_adj - acce_rate_all_CI_band/2
+
+
+eclplot acce_rate_all_adj acce_rate_all_adj_min95 acce_rate_all_adj_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+graph export "${output_dir}/accession_rate_adj_CI.png", replace
+
+* Plot confidence intervals for separations, unadjusted
+*merge 1:1 qdate using "${output_dir}/CI_seps_rate.dta", nogenerate
+generate seps_rate_all_max95 = seps_rate_all + seps_rate_all_CI_band/2
+generate seps_rate_all_min95 = seps_rate_all - seps_rate_all_CI_band/2
+
+eclplot seps_rate_all seps_rate_all_min95 seps_rate_all_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
 graph export "${output_dir}/separation_rate_CI.png", replace
 
+* Plot confidence intervals for accessions, unadjusted
+*merge 1:1 qdate using "${output_dir}/CI_acce_rate.dta", nogenerate
+generate acce_rate_all_max95 = acce_rate_all + acce_rate_all_CI_band/2
+generate acce_rate_all_min95 = acce_rate_all - acce_rate_all_CI_band/2
 
-*drop sep_rate_all_adj_min95 sep_rate_all_adj_max95
-
-/*
-* Produce plots
-reshape n_ long sep_rate acce_rate, i(qdate) j(type) string
-
-keep year quarter qdate type sep_rate acce_rate
-gsort type qdate
-
-merge m:1 year quarter using "${data_dir}\federal_government_shutdown_quarters.dta", nogenerate
-
-drop if qdate == . // shutdowns outside of available sample
-replace shutdown = 0 if shutdown == .
-
-generate cut_type = .
-replace cut_type = 10 if type == "_less_ugrad_adj"
-replace cut_type = 11 if type == "_post_ugrad_adj"
-replace cut_type = 20 if type == "_below_med_pay_adj"
-replace cut_type = 21 if type == "_above_med_pay_adj"
+eclplot acce_rate_all acce_rate_all_min95 acce_rate_all_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+graph export "${output_dir}/accession_rate_CI.png", replace
 
 
-generate treated_group_dummy = 0
-replace treated_group_dummy = 1 if cut_type == 11
-regress sep_rate i.treated_group_dummy i.shutdown i.treated_group_dummy#i.shutdown
+drop seps_rate_all_adj_min95 seps_rate_all_adj_max95 acce_rate_all_adj_min95 acce_rate_all_adj_max95
+
+
+* Calculate number of stayers
+local group_list "all post_ugrad less_ugrad above_med_pay below_med_pay above_med_los below_med_los"
+foreach g of local group_list {
+	generate n_stay_`g' = n_`g' - n_seps_`g'
+}
+
+
+
+reshape long n_, i(qdate) j(type_subgroup) string
+
+generate group = substr(type_subgroup, -3, 3)
+generate type = substr(type_subgroup, 1, 4)
+drop if (type != "stay" & type != "seps" & type != "acce")
+drop if group == "all"
+
+generate separation_ind = type == "seps"
+generate accession_ind = type == "acce"
+
+
+* Produce regressions for education
+preserve
+
+drop if type == "acce"
+keep if group == "rad"
+
+generate educ_ind = substr(type_subgroup, 6,4) == "post"
+regress separation_ind educ_ind i.qdate educ_ind#i.qdate [fweight = n_], nocons
+parmest, saving("${output_dir}/seps_rate_educ.dta", replace)
+
+restore
+
+preserve
+
+drop if type == "seps"
+keep if group == "rad"
+
+generate educ_ind = substr(type_subgroup, 6,4) == "post"
+regress accession_ind educ_ind i.qdate educ_ind#i.qdate [fweight = n_], nocons
+parmest, saving("${output_dir}/acce_rate_educ.dta", replace)
+
+restore
+
+* Run regressions for median pay
+preserve
+
+drop if type == "acce"
+keep if group == "pay"
+
+generate pay_ind = substr(type_subgroup, 6,5) == "above"
+
+regress separation_ind pay_ind i.qdate pay_ind#i.qdate [fweight = n_], nocons
+parmest, saving("${output_dir}/seps_rate_med_pay.dta", replace)
+
+restore
+
+preserve
+
+drop if type == "seps"
+keep if group == "pay"
+
+generate pay_ind = substr(type_subgroup, 6,5) == "above"
+
+regress accession_ind pay_ind i.qdate pay_ind#i.qdate [fweight = n_], nocons
+parmest, saving("${output_dir}/acce_rate_med_pay.dta", replace)
+
+restore
+
+* Run regressions for median los
+preserve
+
+drop if type == "acce"
+keep if group == "los"
+
+generate los_ind = substr(type_subgroup, 6,5) == "above"
+
+regress separation_ind los_ind i.qdate los_ind#i.qdate [fweight = n_], nocons
+parmest, saving("${output_dir}/seps_rate_med_los.dta", replace)
+
+restore
+
+preserve
+
+drop if type == "seps"
+keep if group == "los"
+
+generate los_ind = substr(type_subgroup, 6,5) == "above"
+
+regress accession_ind los_ind i.qdate los_ind#i.qdate [fweight = n_], nocons
+parmest, saving("${output_dir}/acce_rate_med_los.dta", replace)
+
+restore
+*/
+
+********************************************************************************
+* Plot differences in rates over time with CIs
+********************************************************************************
+
+use "${output_dir}/seps_rate_educ.dta", clear
+split parm, parse("." "#")
+keep if parm1 == "1"
+destring parm3, generate(qdate) force
+keep qdate estimate min95 max95
+drop if qdate == . // not sure what is with first period
+format qdate %tq
+
+eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+graph export "${output_dir}/separation_rate_educ.png", replace
+
+
+use "${output_dir}/acce_rate_educ.dta", clear
+split parm, parse("." "#")
+keep if parm1 == "1"
+destring parm3, generate(qdate) force
+keep qdate estimate min95 max95
+drop if qdate == . // not sure what is with first period
+format qdate %tq
+
+eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+graph export "${output_dir}/accession_rate_educ.png", replace
+
+
+use "${output_dir}/seps_rate_med_pay.dta", clear
+split parm, parse("." "#")
+keep if parm1 == "1"
+destring parm3, generate(qdate) force
+keep qdate estimate min95 max95
+drop if qdate == . // not sure what is with first period
+format qdate %tq
+
+eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+graph export "${output_dir}/separation_rate_med_pay.png", replace
+
+
+use "${output_dir}/acce_rate_med_pay.dta", clear
+split parm, parse("." "#")
+keep if parm1 == "1"
+destring parm3, generate(qdate) force
+keep qdate estimate min95 max95
+drop if qdate == . // not sure what is with first period
+format qdate %tq
+
+eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+graph export "${output_dir}/accession_rate_med_pay.png", replace
+
+
+use "${output_dir}/seps_rate_med_los.dta", clear
+split parm, parse("." "#")
+keep if parm1 == "1"
+destring parm3, generate(qdate) force
+keep qdate estimate min95 max95
+drop if qdate == . // not sure what is with first period
+format qdate %tq
+
+eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+graph export "${output_dir}/separation_rate_med_los.png", replace
+
+
+use "${output_dir}/acce_rate_med_los.dta", clear
+split parm, parse("." "#")
+keep if parm1 == "1"
+destring parm3, generate(qdate) force
+keep qdate estimate min95 max95
+drop if qdate == . // not sure what is with first period
+format qdate %tq
+
+eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+graph export "${output_dir}/accession_rate_med_los.png", replace
+
+
+
 
 
 
