@@ -22,7 +22,7 @@ local end_year = 2014
 ********************************************************************************
 * Process dates of government shutdowns
 ********************************************************************************
-
+/*
 * Process dates of government shutdowns
 import delimited using "${raw_dir}\federal_government_shutdowns.csv", clear
 generate quarter = .
@@ -42,7 +42,7 @@ save "${data_dir}\federal_government_shutdown_quarters.dta", replace
 ********************************************************************************
 * Import files
 ********************************************************************************
-
+/*
 * Import dynamic files
 forvalues y = `start_year'(1)`end_year' {
 	forvalues q = 1(1)4 {
@@ -62,14 +62,14 @@ forvalues y = `start_year'(1)`end_year' {
 			}
 			infile using "${code_dir}/opm_dynamic_dict.dct", using("${opm_dynamic_dir}\\`m'`y'.NONDOD.FO05M3.txt")
 
-			destring adj_basic_pay, replace
+			destring adj_basic_pay, replace force
 			keep id agency accession_separation_ind effective_date age los_level occ occ_cat adj_basic_pay appt_type
 			
 			* Generate consistent date variable
 			generate year = substr(effective_date, 1, 4)
 			generate month = substr(effective_date, 5, 2)
-			destring year, replace
-			destring month, replace
+			destring year, replace force
+			destring month, replace force
 			generate quarter = .
 			replace quarter = 3 if month <= 3
 			replace quarter = 6 if inrange(month, 4, 6)
@@ -105,14 +105,14 @@ forvalues y = `start_year'(1)`end_year'  {
 			}
 			infile using "${code_dir}/opm_status_dict.dct", using("${opm_status_dir}\Status_Non_DoD_`y'_`m'.txt")
 			
-			destring adj_basic_pay, replace
+			destring adj_basic_pay, replace force
 			keep id age_range agency file_date age_range education los_level occ occ_cat adj_basic_pay appt_type
 			
 			* Generate consistent date variable
 			generate year = substr(file_date, 1, 4)
 			generate quarter = substr(file_date, 5, 2)
-			destring year, replace
-			destring quarter, replace
+			destring year, replace force
+			destring quarter, replace force
 			
 			scalar define q_since_1961q1 = ((`y'-1960)*4) - 1 + `q'
 			local quart = q_since_1961q1
@@ -149,32 +149,37 @@ forvalues y = `start_year'(1)`end_year' {
 	forvalues q = 1(1)4 {
 		scalar define q_since_1961q1 = ((`y'-1960)*4) - 1 + `q'
 		local quart = q_since_1961q1
-		
-		use "${data_dir}/status_q`quart'.dta", clear
+		if `quart' < 218 {
+			use "${data_dir}/status_q`quart'.dta", clear
 	
-		local q1 = `quart'-1
-		capture noisily append using "${data_dir}/status_q`q1'.dta"
-		local q1 = `quart'-2
-		capture noisily append using "${data_dir}/status_q`q1'.dta"
-		local q1 = `quart'-3
-		capture noisily append using "${data_dir}/status_q`q1'.dta"
-		local q1 = `quart'+1
-		capture noisily append using "${data_dir}/status_q`q1'.dta"
-		local q1 = `quart'+2
-		capture noisily append using "${data_dir}/status_q`q1'.dta"
-		
-		keep id agency education
-
-		gduplicates drop id agency, force
-
-		tempfile status
-		save `status'
+			local q1 = `quart'-1
+			capture noisily append using "${data_dir}/status_q`q1'.dta"
+			local q1 = `quart'-2
+			capture noisily append using "${data_dir}/status_q`q1'.dta"
+			local q1 = `quart'-3
+			capture noisily append using "${data_dir}/status_q`q1'.dta"
+			local q1 = `quart'+1
+			capture noisily append using "${data_dir}/status_q`q1'.dta"
+			local q1 = `quart'+2
+			capture noisily append using "${data_dir}/status_q`q1'.dta"
 			
-		use "${data_dir}/dynamic_q`quart'.dta", clear
-		merge m:1 id agency using `status'
-		drop if _merge == 2
-		drop _merge
-		save "${data_dir}/dynamic_merged_q`quart'.dta", replace
+			keep id agency education
+
+			gduplicates drop id agency, force
+
+			tempfile status
+			save `status'
+				
+			use "${data_dir}/dynamic_q`quart'.dta", clear
+			merge m:1 id agency using `status'
+			drop if _merge == 2
+			drop _merge
+			save "${data_dir}/dynamic_merged_q`quart'.dta", replace
+		}
+		else {
+			continue
+		}
+		
 	}
 }
 
@@ -299,7 +304,6 @@ use "${data_dir}/status_combined_collapsed.dta", clear
 merge 1:1 year quarter using "${data_dir}/dynamic_merged_combined_collapsed.dta", nogenerate
 
 
-
 /*
 * Calculate separation rates for each subgroup
 local group_list "all post_ugrad less_ugrad above_med_pay below_med_pay"
@@ -367,7 +371,7 @@ graph export "${output_dir}/separation_rate_CI.png", replace
 drop sep_rate_all_adj_min95 sep_rate_all_adj_max95
 
 * Produce plots
-reshape long sep_rate acce_rate, i(qdate) j(type) string
+reshape n_ long sep_rate acce_rate, i(qdate) j(type) string
 
 keep year quarter qdate type sep_rate acce_rate
 gsort type qdate
