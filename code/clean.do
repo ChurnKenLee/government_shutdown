@@ -4,9 +4,9 @@
 
 capture log close
 clear all
-set graphics off
+set graphics on
 
-global root_dir = "C:\Users\churn\Documents\UCSD\Projects\government_shutdown_ken"
+global root_dir = "C:\Users\churn\Documents\UCSD\Projects\government_shutdown"
 global code_dir = "${root_dir}\code"
 global raw_dir = "${root_dir}\rawdata"
 global data_dir = "${root_dir}\data"
@@ -143,7 +143,7 @@ save "${data_dir}\status_combined.dta", replace
 ********************************************************************************
 * Merge dynamics and status files to get education level of leavers
 ********************************************************************************
-
+/*
 * Merge status files to dynamic files to obtain education level of separators
 forvalues y = `start_year'(1)`end_year' {
 	forvalues q = 1(1)4 {
@@ -202,7 +202,7 @@ save "${data_dir}/dynamic_merged_combined.dta", replace
 ********************************************************************************
 * Calculate aggregate numbers within status files
 ********************************************************************************
-
+/*
 * Calculate n employees
 use "${data_dir}\status_combined.dta", clear
 generate emp = 1 // indicator for summing over in egen
@@ -247,7 +247,7 @@ save "${data_dir}/status_combined_collapsed.dta", replace
 ********************************************************************************
 * Calculate aggregate separation/accession numbers within dynamic files
 ********************************************************************************
-
+/*
 * Calculate accession and separation numbers by subgroups within dynamic data
 use "${data_dir}\dynamic_merged_combined.dta", clear
 
@@ -303,8 +303,9 @@ save "${data_dir}/dynamic_merged_combined_collapsed.dta", replace
 use "${data_dir}/status_combined_collapsed.dta", clear
 merge 1:1 year quarter using "${data_dir}/dynamic_merged_combined_collapsed.dta", nogenerate
 
+generate qdate = qofd(mdy(quarter, 1, year))
 
-/*
+
 * Calculate separation rates for each subgroup
 local group_list "all post_ugrad less_ugrad above_med_pay below_med_pay"
 foreach g of local group_list {
@@ -313,7 +314,6 @@ foreach g of local group_list {
 }
 
 * Control for seasonal and trend effects
-generate qdate = qofd(mdy(quarter, 1, year))
 
 foreach g of local group_list {
 	regress sep_rate_`g' qdate i.quarter, nocons
@@ -366,10 +366,13 @@ drop sep_rate_all_CI_band
 format qdate %tq
 tsset qdate
 sort qdate
-eclplot sep_rate_all_adj sep_rate_all_adj_min95 sep_rate_all_adj_max95 qdate
+eclplot sep_rate_all_adj sep_rate_all_adj_min95 sep_rate_all_adj_max95 qdate, eplottype(scatter) estopts(mlabel(point)) ciforeground
 graph export "${output_dir}/separation_rate_CI.png", replace
-drop sep_rate_all_adj_min95 sep_rate_all_adj_max95
 
+
+*drop sep_rate_all_adj_min95 sep_rate_all_adj_max95
+
+/*
 * Produce plots
 reshape n_ long sep_rate acce_rate, i(qdate) j(type) string
 
