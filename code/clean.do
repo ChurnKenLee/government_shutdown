@@ -324,6 +324,7 @@ save "${data_dir}/dynamic_merged_combined_collapsed.dta", replace
 ********************************************************************************
 * Merge aggregate status and dynamic numbers to calculate rates
 ********************************************************************************
+
 * Merge status and dynamic aggregate numbers
 use "${data_dir}/status_combined_collapsed.dta", clear
 merge 1:1 year quarter using "${data_dir}/dynamic_merged_combined_collapsed.dta", nogenerate
@@ -404,38 +405,44 @@ generate seps_rate_all_adj_min95 = seps_rate_all_adj - seps_rate_all_CI_band/2
 
 format qdate %tq
 tsset qdate
-sort qdate
+gsort qdate
 
-eclplot seps_rate_all_adj seps_rate_all_adj_min95 seps_rate_all_adj_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+eclplot seps_rate_all_adj seps_rate_all_adj_min95 seps_rate_all_adj_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ysize(9) xsize(16) supby(quarter) ///
+xline(99 108 123 143 215) xtitle("Quarters") ytitle("Separation rate") ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/separation_rate_adj_CI.png", replace
 
 * Plot confidence intervals for accessions
 merge 1:1 qdate using "${output_dir}/CI_acce_rate.dta", nogenerate
 generate acce_rate_all_adj_max95 = acce_rate_all_adj + acce_rate_all_CI_band/2
 generate acce_rate_all_adj_min95 = acce_rate_all_adj - acce_rate_all_CI_band/2
+gsort qdate
 
-
-eclplot acce_rate_all_adj acce_rate_all_adj_min95 acce_rate_all_adj_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+eclplot acce_rate_all_adj acce_rate_all_adj_min95 acce_rate_all_adj_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ysize(9) xsize(16) supby(quarter) ///
+xline(99 108 123 143 215) xtitle("Quarters") ytitle("Entry rate") ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/accession_rate_adj_CI.png", replace
 
 * Plot confidence intervals for separations, unadjusted
 *merge 1:1 qdate using "${output_dir}/CI_seps_rate.dta", nogenerate
 generate seps_rate_all_max95 = seps_rate_all + seps_rate_all_CI_band/2
 generate seps_rate_all_min95 = seps_rate_all - seps_rate_all_CI_band/2
+gsort qdate
 
-eclplot seps_rate_all seps_rate_all_min95 seps_rate_all_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+eclplot seps_rate_all seps_rate_all_min95 seps_rate_all_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ysize(9) xsize(16) supby(quarter) ///
+xline(99 108 123 143 215) xtitle("Quarters") ytitle("Separation rate") ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/separation_rate_CI.png", replace
 
 * Plot confidence intervals for accessions, unadjusted
 *merge 1:1 qdate using "${output_dir}/CI_acce_rate.dta", nogenerate
 generate acce_rate_all_max95 = acce_rate_all + acce_rate_all_CI_band/2
 generate acce_rate_all_min95 = acce_rate_all - acce_rate_all_CI_band/2
+gsort qdate
 
-eclplot acce_rate_all acce_rate_all_min95 acce_rate_all_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+eclplot acce_rate_all acce_rate_all_min95 acce_rate_all_max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ysize(9) xsize(16) supby(quarter) ///
+xline(99 108 123 143 215) xtitle("Quarters") ytitle("Entry rate") ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/accession_rate_CI.png", replace
 
 
@@ -545,10 +552,21 @@ keep if parm1 == "1"
 destring parm3, generate(qdate) force
 keep qdate estimate min95 max95
 drop if qdate == . // not sure what is with first period
+
+gsort qdate
+gegen quarter = fill(1 2 3 4 1 2 3 4)
+regress estimate i.quarter qdate
+predict estimate_adj, resid
+
+generate ci_bound = max95 - min95
+replace max95 = estimate_adj + ci_bound/2
+replace min95 = estimate_adj - ci_bound/2
+
 format qdate %tq
 
-eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+eclplot estimate_adj min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("Quarters", size(large)) ytitle("Separation rate", size(large)) ysize(9) xsize(16) supby(quarter) ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/separation_rate_educ.png", replace
 
 
@@ -558,10 +576,22 @@ keep if parm1 == "1"
 destring parm3, generate(qdate) force
 keep qdate estimate min95 max95
 drop if qdate == . // not sure what is with first period
+
+gsort qdate
+gegen quarter = fill(1 2 3 4 1 2 3 4)
+regress estimate i.quarter qdate
+predict estimate_adj, resid
+
+generate ci_bound = max95 - min95
+replace max95 = estimate_adj + ci_bound/2
+replace min95 = estimate_adj - ci_bound/2
+
 format qdate %tq
 
-eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+
+eclplot estimate_adj min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("Quarters", size(large)) ytitle("Entry rate", size(large)) ysize(9) xsize(16) supby(quarter) ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/accession_rate_educ.png", replace
 
 
@@ -571,10 +601,21 @@ keep if parm1 == "1"
 destring parm3, generate(qdate) force
 keep qdate estimate min95 max95
 drop if qdate == . // not sure what is with first period
+
+gsort qdate
+gegen quarter = fill(1 2 3 4 1 2 3 4)
+regress estimate i.quarter qdate
+predict estimate_adj, resid
+
+generate ci_bound = max95 - min95
+replace max95 = estimate_adj + ci_bound/2
+replace min95 = estimate_adj - ci_bound/2
+
 format qdate %tq
 
-eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+eclplot estimate_adj min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("Quarters", size(large)) ytitle("Separation rate", size(large)) ysize(9) xsize(16) supby(quarter) ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/separation_rate_med_pay.png", replace
 
 
@@ -584,10 +625,21 @@ keep if parm1 == "1"
 destring parm3, generate(qdate) force
 keep qdate estimate min95 max95
 drop if qdate == . // not sure what is with first period
+
+gsort qdate
+gegen quarter = fill(1 2 3 4 1 2 3 4)
+regress estimate i.quarter qdate
+predict estimate_adj, resid
+
+generate ci_bound = max95 - min95
+replace max95 = estimate_adj + ci_bound/2
+replace min95 = estimate_adj - ci_bound/2
+
 format qdate %tq
 
-eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+eclplot estimate_adj min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("Quarters", size(large)) ytitle("Entry rate", size(large)) ysize(9) xsize(16) supby(quarter) ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/accession_rate_med_pay.png", replace
 
 
@@ -597,10 +649,21 @@ keep if parm1 == "1"
 destring parm3, generate(qdate) force
 keep qdate estimate min95 max95
 drop if qdate == . // not sure what is with first period
+
+gsort qdate
+gegen quarter = fill(1 2 3 4 1 2 3 4)
+regress estimate i.quarter qdate
+predict estimate_adj, resid
+
+generate ci_bound = max95 - min95
+replace max95 = estimate_adj + ci_bound/2
+replace min95 = estimate_adj - ci_bound/2
+
 format qdate %tq
 
-eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Separation rate")
+eclplot estimate_adj min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("Quarters", size(large)) ytitle("Separation rate", size(large)) ysize(9) xsize(16) supby(quarter) ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/separation_rate_med_los.png", replace
 
 
@@ -610,10 +673,21 @@ keep if parm1 == "1"
 destring parm3, generate(qdate) force
 keep qdate estimate min95 max95
 drop if qdate == . // not sure what is with first period
+
+gsort qdate
+gegen quarter = fill(1 2 3 4 1 2 3 4)
+regress estimate i.quarter qdate
+predict estimate_adj, resid
+
+generate ci_bound = max95 - min95
+replace max95 = estimate_adj + ci_bound/2
+replace min95 = estimate_adj - ci_bound/2
+
 format qdate %tq
 
-eclplot estimate min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
-xline(99 108 123 143 215) xtitle("") ytitle("Accession rate")
+eclplot estimate_adj min95 max95 qdate, eplottype(scatter) estopts(msize(tiny)) ciforeground ///
+xline(99 108 123 143 215) xtitle("Quarters", size(large)) ytitle("Entry rate", size(large)) ysize(9) xsize(16) supby(quarter) ///
+caption("Dropped quarters: 1988q1q2q3, 1995q1, 2003q1, adjusted with seasonal FEs and linear time trend") ylabel(, labsize(large)) xlabel(, labsize(large))
 graph export "${output_dir}/accession_rate_med_los.png", replace
 
 
