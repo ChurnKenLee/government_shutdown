@@ -1,9 +1,9 @@
-
-
-
-
+# Ignore all dta and zip files
 *.dta
-
 *.zip
 
+# Folders to ignore
 rawdata/
+data/
+output/
+
