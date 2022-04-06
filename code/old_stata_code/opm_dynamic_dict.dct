@@ -1,0 +1,22 @@
+infile dictionary {
+	* Dictionary to read OPM dynamic files
+	* Churn Ken Lee
+	* 28 February 2022
+	_column(1) str9 id %9s "PSEUDO-ID"
+	_column(10) str23 name %23s "EMPLOYEE NAME"
+	_column(33) str4 agency %4s "AGENCY/SUBELEMENT"
+	_column(37) str2 accession_separation_ind %2s "ACCESSION/SEPARATION INDICATOR"
+	_column(39) str8 effective_date %8s "EFFECTIVE DATE"
+	_column(47) str6 age %6s "AGE"
+	_column(53) str2 pay_plan %2s "PAY PLAN"
+	_column(55) str2 pay_grade %2s "GRADE"
+	_column(57) str6 los_level %6s "LOS LEVEL"
+	_column(63) str9 duty_station %9s "DUTY STATION"
+	_column(72) str4 occ %4s "OCCUPATION"
+	_column(76) str1 occ_cat %1s "OCCUPATIONAL CATEGORY"
+	_column(77) str6 adj_basic_pay %6s "ADJUSTED BASIC PAY"
+	_column(83) str2 appt_type %2s "TYPE OF APPOINTMENT"
+	_column(85) str1 work_schedule %1s "WORK SCHEDULE"
+}
+
+
