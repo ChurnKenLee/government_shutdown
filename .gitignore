@@ -1,8 +1,9 @@
-# Ignore all dta and zip files
+# Ignore all data files
 *.dta
 *.zip
+*.feather
 
 # Folders to ignore
-rawdata/
-data/
+raw_data/
+cleaned_binaries/
 
