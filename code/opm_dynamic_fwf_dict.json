@@ -1,0 +1,70 @@
+{
+    "Pseudo-ID": [
+        0,
+        9
+    ],
+    "Employee Name": [
+        9,
+        32
+    ],
+    "Agency/Subelement": [
+        32,
+        36
+    ],
+    "Accession/Separation Indicator": [
+        36,
+        38
+    ],
+    "Effective Date (year)": [
+        38,
+        42
+    ],
+    "Effective Date (month)": [
+        42,
+        44
+    ],
+    "Effective Date (day)": [
+        44,
+        46
+    ],
+    "Age": [
+        46,
+        52
+    ],
+    "Pay Plan": [
+        52,
+        54
+    ],
+    "Grade": [
+        54,
+        56
+    ],
+    "LOS Level": [
+        56,
+        62
+    ],
+    "Duty Station": [
+        62,
+        71
+    ],
+    "Occupation": [
+        71,
+        75
+    ],
+    "Occupational Category (PATCO)": [
+        75,
+        76
+    ],
+    "Adjusted Basic Pay": [
+        76,
+        82
+    ],
+    "Type of Appointment": [
+        82,
+        84
+    ],
+    "Work Schedule": [
+        84,
+        85
+    ]
+}

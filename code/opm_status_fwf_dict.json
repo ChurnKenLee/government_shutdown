@@ -1,0 +1,78 @@
+{
+    "Pseudo-ID": [
+        0,
+        9
+    ],
+    "Employee Name": [
+        9,
+        32
+    ],
+    "File Date (year)": [
+        32,
+        36
+    ],
+    "File Date (month)": [
+        36,
+        38
+    ],
+    "File Date (day)": [
+        38,
+        40
+    ],
+    "Agency/Subelement": [
+        40,
+        44
+    ],
+    "Duty Station": [
+        44,
+        53
+    ],
+    "Age Range": [
+        53,
+        59
+    ],
+    "Education Level": [
+        59,
+        61
+    ],
+    "Pay Plan": [
+        61,
+        63
+    ],
+    "Grade": [
+        63,
+        65
+    ],
+    "LOS Level": [
+        65,
+        71
+    ],
+    "Occupation": [
+        71,
+        75
+    ],
+    "Occupational Category (PATCO)": [
+        75,
+        76
+    ],
+    "Adjusted Basic Pay": [
+        76,
+        82
+    ],
+    "Supervisory Status": [
+        82,
+        83
+    ],
+    "Type of Appointment": [
+        83,
+        85
+    ],
+    "Work Schedule": [
+        85,
+        86
+    ],
+    "NSFTP Indicator": [
+        86,
+        87
+    ]
+}

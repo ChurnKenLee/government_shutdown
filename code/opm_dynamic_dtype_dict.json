@@ -1,0 +1,19 @@
+{
+    "Pseudo-ID": "string",
+    "Employee Name": "string",
+    "Agency/Subelement": "category",
+    "Accession/Separation Indicator": "category",
+    "Effective Date (year)": "Int16",
+    "Effective Date (month)": "Int8",
+    "Effective Date (day)": "Int8",
+    "Age": "category",
+    "Pay Plan": "category",
+    "Grade": "category",
+    "LOS Level": "category",
+    "Duty Station": "category",
+    "Occupation": "category",
+    "Occupational Category (PATCO)": "category",
+    "Adjusted Basic Pay": "string",
+    "Type of Appointment": "category",
+    "Work Schedule": "category"
+}

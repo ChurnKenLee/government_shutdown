@@ -1,0 +1,21 @@
+{
+    "Pseudo-ID": "string",
+    "Employee Name": "string",
+    "File Date (year)": "Int16",
+    "File Date (month)": "Int8",
+    "File Date (day)": "Int8",
+    "Agency/Subelement": "category",
+    "Duty Station": "category",
+    "Age Range": "category",
+    "Education Level": "category",
+    "Pay Plan": "category",
+    "Grade": "category",
+    "LOS Level": "category",
+    "Occupation": "category",
+    "Occupational Category (PATCO)": "category",
+    "Adjusted Basic Pay": "string",
+    "Supervisory Status": "category",
+    "Type of Appointment": "category",
+    "Work Schedule": "category",
+    "NSFTP Indicator": "category"
+}
