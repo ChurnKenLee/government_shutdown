@@ -1,0 +1,107 @@
+\documentclass[aspectratio=169]{beamer}
+%
+% Choose how your presentation looks.
+%
+% For more themes, color themes and font themes, see:
+% http://deic.uab.es/~iblanes/beamer_gallery/index_by_theme.html
+%
+\mode<presentation>
+{
+    \usetheme{default}      % or try Darmstadt, Madrid, Warsaw, ...
+    \usecolortheme{default} % or try albatross, beaver, crane, ...
+    \usefonttheme{default}  % or try serif, structurebold, ...
+    \setbeamertemplate{navigation symbols}{}
+    \setbeamertemplate{caption}[numbered]
+}
+
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{breqn}
+\usepackage{bbm}
+\usepackage{multicol}
+\usepackage{booktabs}
+%\usepackage{enumitem}
+
+\newenvironment{wideitemize}{\itemize\addtolength{\itemsep}{10pt}}{\enditemize}
+
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+
+\usepackage[style=authoryear, backend=biber]{biblatex}
+\addbibresource{}
+
+\title{Occupation-specific local labor market spillovers of federal government employment}
+\author{Nathaniel Bechhofer \and Churn Ken Lee}
+\institute{UC San Diego}
+\date{}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}
+    \frametitle{Question}
+
+    Do hiring shocks to the occupational composition of a labor market change the composition by more or less than one-to-one? 
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Short answer}
+
+    \begin{wideitemize}
+        \item A 1 percent increase in federal employment in a given occupation-MSA (as a percentage of total employment of that occupation-MSA)
+        \item is associated with a 2 to 5 percent decrease in non-federal employment in that same occupation-MSA
+    \end{wideitemize}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Data}
+
+    \begin{wideitemize}
+        \item OPM full-count of Non-DoD employees, 1974 - 2014 ($\sim$ 1 million)
+        \begin{itemize}
+            \item Match to metro area and Census occupation codes
+        \end{itemize}
+        \item BLS Occupational Employment and Wage Statistics (OEWS) at the metro level
+    \end{wideitemize}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Regression results}
+
+    \begin{table}[width = \textwidth]
+        {\centering
+        \begin{tabular}{l*{5}{c}}
+            \toprule
+            &\multicolumn{5}{c}{Percent change in non-federal employment} \\
+            &\multicolumn{1}{c}{(1)}&\multicolumn{1}{c}{(2)}&\multicolumn{1}{c}{(3)}&\multicolumn{1}{c}{(4)}&\multicolumn{1}{c}{(5)} \\
+            \midrule
+            Percent change in federal &      -4.895&      -5.468&      -5.472&      -5.590&      -2.245\\
+            emp as percent of total &     (0.411)&     (0.478)&     (0.489)&     (0.515)&     (0.238)\\
+            \midrule
+            Weight              &          No&         Yes&         Yes&         Yes&         Yes\\
+            Year FE             &          No&          No&         Yes&         Yes&         Yes\\
+            Year X MSA FE       &          No&          No&          No&         Yes&          No\\
+            Year X OCC FE       &          No&          No&          No&          No&         Yes\\
+            N                   &       13408&        9309&        9309&        9309&        9309\\
+            \bottomrule
+            \multicolumn{6}{l}{\footnotesize Standard errors in parentheses}\\
+            \end{tabular}
+        }
+    \end{table}
+
+\end{frame}
+
+
+
+
+
+\end{document}
+
+
